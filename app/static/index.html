@@ -1,0 +1,59 @@
+<html>
+	<button onclick="initEventSource()">init eventsource</button>
+	<button onclick="closeEventSource()">close eventsource</button>
+	<button onclick="greetServer()">Greet server</button>
+	<div><button onclick="initGreet()">Init greet</button></div>
+	<p>EventSource state:<span id="es_state"></span>
+
+	<p>Here are some combo to try:</p>
+	<ol>
+		<li>init, close, greet</li>
+		<li>init, greet, close, 3 greets</li>
+		<li>init, greet, close (this will hang server)</li>
+	</ol>
+
+	<p>After doing 2, going back to 1, it needs 2 greets at the end to flush out / clean up. </p>
+
+	<p>So the conclusion is that you need to flush out the msgs, and in this case call server 3 times to be sure all msgs are cleaned up.</p>
+	<script type="text/javascript">
+		let e;
+		function initEventSource() {
+			console.log('initing event source')
+			e = new EventSource('/stream');
+			updateEventSourceState();
+		}
+
+		function closeEventSource() {
+			e && e.close();
+			// e = undefined;
+			updateEventSourceState();
+		}
+
+		function greetServer() {
+			let xhr = new XMLHttpRequest();
+			xhr.open('GET', '/hello');
+			xhr.onload = function() {
+				console.log(xhr.responseText);
+				updateEventSourceState();
+			};
+
+			xhr.send();
+		}
+
+		function updateEventSourceState() {
+			document.getElementById('es_state').innerHTML = e.readyState;
+		}
+
+		function initGreet() {
+			// here's a pitfall
+			e = new EventSource('/stream');
+			// this will send / complete before EventSource connection.
+			greetServer();
+
+			// this will happen after EventSource connection
+			// setTimeout(greetServer, 0);
+		}
+
+		addEventListener('beforeunload', event => {closeEventSource()});
+	</script>
+</html>
